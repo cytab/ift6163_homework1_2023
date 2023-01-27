@@ -1,5 +1,5 @@
 from hw1.roble.infrastructure.utils import *
-
+import numpy as np
 
 class ReplayBuffer(object):
 
@@ -49,7 +49,7 @@ class ReplayBuffer(object):
                 )[-self.max_size:]
             else:
                 if isinstance(rewards, list):
-                    self.rews += rewards
+                    self.rews += rewardsdone
                 else:
                     self.rews.append(rewards)
                 self.rews = self.rews[-self.max_size:]
@@ -76,7 +76,15 @@ class ReplayBuffer(object):
         ## HINT 1: use np.random.permutation to sample random indices
         ## HINT 2: return corresponding data points from each array (i.e., not different indices from each array)
         ## HINT 3: look at the sample_recent_data function below
-        raise NotImplementedError #return TODO, TODO, TODO, TODO, TODO
+        indices = np.random.permutation(len(self.obs))
+   
+        return (
+                self.obs[indices[0:batch_size]],
+                self.acs[indices[0:batch_size]],
+                self.rews[indices[0:batch_size]],
+                self.next_obs[indices[0:batch_size]],
+                self.terminals[indices[0:batch_size]],
+            )
 
     def sample_recent_data(self, batch_size=1):
         return (
