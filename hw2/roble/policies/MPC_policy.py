@@ -48,7 +48,7 @@ class MPCPolicy(BasePolicy):
                 + f"num_elites={self.cem_num_elites}, iterations={self.cem_iterations}")
 
     def get_random_actions(self, num_sequences, horizon):
-       return np.random.uniform(low=self.ac_space.low, high=self.ac_space.high,
+        return np.random.uniform(low=self.ac_space.low, high=self.ac_space.high,
 						size=(horizon,num_sequences))
 						
     def sample_action_sequences(self, num_sequences, horizon, obs=None):
@@ -57,8 +57,10 @@ class MPCPolicy(BasePolicy):
             # TODO (Q1) uniformly sample trajectories and return an array of
             # dimensions (num_sequences, horizon, self.ac_dim) in the range
             # [self.low, self.high]
-            TODO
-            return random_action_sequences
+            random_action_sequences = []
+            for i in range(num_sequences):
+                random_action_sequences.append(self.get_random_actions(self.ac_dim, horizon))
+            return np.asarray(random_action_sequences)
         elif self.sample_strategy == 'cem':
             # TODO(Q5): Implement action selection using CEM.
             # Begin with randomly selected actions, then refine the sampling distribution
@@ -90,7 +92,6 @@ class MPCPolicy(BasePolicy):
         # Hint: the return value should be an array of shape (N,)
         for model in self.dyn_models:
             pass
-
         return TODO
 
     def get_action(self, obs):
@@ -100,7 +101,7 @@ class MPCPolicy(BasePolicy):
         # sample random actions (N x horizon)
         candidate_action_sequences = self.sample_action_sequences(
             num_sequences=self.N, horizon=self.horizon, obs=obs)
-
+        
         if candidate_action_sequences.shape[0] == 1:
             # CEM: only a single action sequence to consider; return the first action
             return candidate_action_sequences[0][0][None]

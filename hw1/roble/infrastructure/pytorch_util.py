@@ -52,11 +52,10 @@ def build_mlp(
     layers.append(activation)
     for i in range(n_layers):
         layers.append(nn.Linear(size, size))
-        if i == n_layers - 1:
-            layers.append(output_activation)
-        else:
-            layers.append(activation)
+        layers.append(activation)
+        
     layers.append(nn.Linear(size, output_size))
+    layers.append(output_activation)
     model = nn.Sequential(*layers)
     
     return model
