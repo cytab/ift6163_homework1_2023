@@ -65,38 +65,38 @@ class MPCPolicy(BasePolicy):
             # Begin with randomly selected actions, then refine the sampling distribution
             # iteratively as described in Section 3.3, "Iterative Random-Shooting with Refinement" of
             # https://arxiv.org/pdf/1909.11652.pdf
-            mean = np.zeros(self.horizon)
-            var = 5 * np.ones(self.horizon)
+            mean = np.zeros((self.horizon, self.ac_dim))
+            var = np.ones((self.horizon, self.ac_dim))
             random_action_sequences = []
             
             
             for i in range(self.cem_iterations):
+                random_action_sequences = []
                 if i == 0:
                     for i in range(num_sequences):
                         random_action_sequences.append(self.get_random_actions(self.ac_dim, horizon))
                 else:
                     for i in range(num_sequences):
-                        random_action_sequences.append(np.random.normal(loc=mean, scale=var, size=(horizon,num_sequences)))
+                        random_action_sequences.append(np.random.normal(loc=mean, scale=var, size=(self.horizon, self.ac_dim)))
                 # - Sample candidate sequences from a Gaussian with the current
                 #   elite mean and variance
                 #     (Hint: remember that for the first iteration, we instead sample
                 #      uniformly at random just like we do for random-shooting)
-                predicted_rewards = self.evaluate_candidate_sequences(random_action_sequences, obs)
+                predicted_rewards = self.evaluate_candidate_sequences(np.asarray(random_action_sequences), obs)
                 indices = predicted_rewards.argsort()[::-1]
-                elites = random_action_sequences[indices, :self.cem_num_elites]
+                elites = np.asarray(random_action_sequences)[indices[:self.cem_num_elites], :, :]
                 # - Get the top `self.cem_num_elites` elites
                 #     (Hint: what existing function can we use to compute rewards for
                 #      our candidate sequences in order to rank them?)
                 # - Update the elite mean and variance
-                n_mean = np.mean(elites, axis = 0)
-                n_var = np.var(elites, axis = 0)
-                
+                n_mean = np.mean(elites, axis=0)
+                n_var = np.var(elites, axis=0)
                 mean = self.cem_alpha*mean + (1-self.cem_alpha)*n_mean
                 var = self.cem_alpha*var + (1-self.cem_alpha)*n_var
 
             # TODO(Q5): Set `cem_action` to the appropriate action sequence chosen by CEM.
             # The shape should be (horizon, self.ac_dim)  
-            cem_action = random_action_sequences[np.argmax(predicted_rewards), :]
+            cem_action = np.asarray(random_action_sequences)[np.argmax(predicted_rewards), :]
             return cem_action[None]
         else:
             raise Exception(f"Invalid sample_strategy: {self.sample_strategy}")
