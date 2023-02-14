@@ -56,10 +56,8 @@ class MPCPolicy(BasePolicy):
             or (self.sample_strategy == 'cem' and obs is None):
             # dimensions (num_sequences, horizon, self.ac_dim) in the range
             # [self.low, self.high]
-            random_action_sequences = []
-            for i in range(num_sequences):
-                random_action_sequences.append(self.get_random_actions(self.ac_dim, horizon))
-            return np.asarray(random_action_sequences)
+            random_action_sequences = np.random.uniform(low=self.ac_space.low, high=self.ac_space.high, size=(num_sequences, horizon, self.ac_dim))
+            return random_action_sequences
         elif self.sample_strategy == 'cem':
             # TODO(Q5): Implement action selection using CEM.
             # Begin with randomly selected actions, then refine the sampling distribution
@@ -73,11 +71,9 @@ class MPCPolicy(BasePolicy):
             for i in range(self.cem_iterations):
                 random_action_sequences = []
                 if i == 0:
-                    for i in range(num_sequences):
-                        random_action_sequences.append(self.get_random_actions(self.ac_dim, horizon))
+                    random_action_sequences = np.random.uniform(low=self.ac_space.low, high=self.ac_space.high, size=(num_sequences, horizon, self.ac_dim))
                 else:
-                    for i in range(num_sequences):
-                        random_action_sequences.append(np.random.normal(loc=mean, scale=var, size=(self.horizon, self.ac_dim)))
+                    random_action_sequences = np.random.normal(loc=mean, scale=var, size=(num_sequences,self.horizon, self.ac_dim))
                 # - Sample candidate sequences from a Gaussian with the current
                 #   elite mean and variance
                 #     (Hint: remember that for the first iteration, we instead sample
