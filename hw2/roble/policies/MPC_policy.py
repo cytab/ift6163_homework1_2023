@@ -163,8 +163,8 @@ class MPCPolicy(BasePolicy):
             next_states_prediction_sequences[:,i,:] = model.get_prediction(expanded_obs[:,i,:], candidate_action_sequences[:,i,:], self.data_statistics)
 
         # Calculate the sum of rewards for each action sequence
-        for i in range(N):
-            for j in range(H):
-                sum_of_rewards[i] += np.sum(self.env.get_reward(next_states_prediction_sequences[i, j], candidate_action_sequences[i, j]))
+        
+        for j in range(H):
+            sum_of_rewards[i] += np.sum(self.env.get_reward(next_states_prediction_sequences[:,i, :], candidate_action_sequences[:,i,:]))
                 
         return sum_of_rewards
