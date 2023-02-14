@@ -159,8 +159,8 @@ class MPCPolicy(BasePolicy):
         expanded_obs = np.tile(obs, (N, H, 1))
         next_states_prediction_sequences = expanded_obs
         # Predict the sequence of next states
-        for i in range(N):
-            next_states_prediction_sequences[i,:,:] = model.get_prediction(expanded_obs[i,:,:], candidate_action_sequences[i,:,:], self.data_statistics)
+        for i in range(H):
+            next_states_prediction_sequences[:,i,:] = model.get_prediction(expanded_obs[:,i,:], candidate_action_sequences[:,i,:], self.data_statistics)
 
         # Calculate the sum of rewards for each action sequence
         for i in range(N):
