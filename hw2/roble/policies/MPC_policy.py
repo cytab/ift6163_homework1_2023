@@ -165,6 +165,6 @@ class MPCPolicy(BasePolicy):
         # Calculate the sum of rewards for each action sequence
         
         for j in range(H):
-            sum_of_rewards[i] += np.sum(self.env.get_reward(next_states_prediction_sequences[:,i, :], candidate_action_sequences[:,i,:]))
+            sum_of_rewards[:] += np.sum(self.env.get_reward(next_states_prediction_sequences[:,i, :], candidate_action_sequences[:,i,:])[0][:])
                 
         return sum_of_rewards
