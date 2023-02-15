@@ -78,9 +78,9 @@ class MPCPolicy(BasePolicy):
                 #   elite mean and variance
                 #     (Hint: remember that for the first iteration, we instead sample
                 #      uniformly at random just like we do for random-shooting)
-                predicted_rewards = self.evaluate_candidate_sequences(random_action_sequences, obs)
+                predicted_rewards = self.evaluate_candidate_sequences(np.asarray(random_action_sequences), obs)
                 indices = predicted_rewards.argsort()[::-1]
-                elites = random_action_sequences[indices[:self.cem_num_elites], :, :]
+                elites = np.asarray(random_action_sequences)[indices[:self.cem_num_elites], :, :]
                 # - Get the top `self.cem_num_elites` elites
                 #     (Hint: what existing function can we use to compute rewards for
                 #      our candidate sequences in order to rank them?)
@@ -165,6 +165,6 @@ class MPCPolicy(BasePolicy):
         # Calculate the sum of rewards for each action sequence
         
         for j in range(H):
-            sum_of_rewards[:] += np.sum(self.env.get_reward(next_states_prediction_sequences[:,i, :], candidate_action_sequences[:,i,:])[0][:])
+            sum_of_rewards[:] += self.env.get_reward(next_states_prediction_sequences[:,i, :], candidate_action_sequences[:,i,:])[0][:]
                 
         return sum_of_rewards
