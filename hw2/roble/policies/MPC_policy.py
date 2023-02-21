@@ -156,15 +156,14 @@ class MPCPolicy(BasePolicy):
         N, H, D_action = candidate_action_sequences.shape
         
         # Expand the obs to match the shape of the candidate action sequences
-        expanded_obs = np.tile(obs, (N, H, 1))
+        expanded_obs = np.repeat(np.expand_dims(obs, axis=0), N, axis=0)
         next_states_prediction_sequences = expanded_obs
         # Predict the sequence of next states
         for i in range(H):
-            next_states_prediction_sequences[:,i,:] = model.get_prediction(expanded_obs[:,i,:], candidate_action_sequences[:,i,:], self.data_statistics)
-
-        # Calculate the sum of rewards for each action sequence
-        for j in range(H):
-            for i in range(N):
-                sum_of_rewards[i] += np.sum(self.env.get_reward(next_states_prediction_sequences[i,j, :], candidate_action_sequences[i,j,:]))
+            current_actions = candidate_action_sequences[:,i,:]
+            rewards_batch = self.env.get_reward(expanded_obs, current_actions)
+            sum_of_rewards[:] += rewards_batch[0][:]
+            expanded_obs = model.get_prediction(expanded_obs, current_actions, self.data_statistics)
+            
                 
         return sum_of_rewards
