@@ -57,7 +57,7 @@ class DQNAgent(object):
                 # OR if your current step number (see self.t) is less that self.learning_starts
             action = np.random.randint(0, self.num_actions)
         else:
-            # HINT: Your actor will take in multiple previous observations ("frames") in order
+            # HINT: Your                              will take in multiple previous observations ("frames") in order
                 # to deal with the partial observability of the environment. Get the most recent 
                 # `frame_history_len` observations using functionality from the replay buffer,
                 # and then use those observations as input to your actor. 
