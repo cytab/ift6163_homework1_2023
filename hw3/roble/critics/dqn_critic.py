@@ -74,7 +74,7 @@ class DQNCritic(BaseCritic):
             # is being updated, but the Q-value for this action is obtained from the
             # target Q-network. Please review Lecture 8 for more details,
             # and page 4 of https://arxiv.org/pdf/1509.06461.pdf is also a good reference.
-            q_tp1 = qa_tp1_values.gather(1, torch.max(self.q_net(ob_no), 1)[1].unsqueeze(1)).squeeze(1)
+            q_tp1 = qa_tp1_values.gather(1, torch.max(self.q_net(next_ob_no), 1)[1].unsqueeze(1)).max(1)[0]
             
         else:
             q_tp1, _ = qa_tp1_values.max(dim=1)
@@ -102,6 +102,7 @@ class DQNCritic(BaseCritic):
                 self.q_net_target.parameters(), self.q_net.parameters()
         ):
             target_param.data.copy_(param.data)
+
 
     def qa_values(self, obs):
         obs = ptu.from_numpy(obs)

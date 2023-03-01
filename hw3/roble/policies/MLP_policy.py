@@ -87,7 +87,13 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         # TODO: 
         ##
-        pass
+        if len(obs.shape) > 1:
+            observation = obs
+        else:
+            observation = obs[None]
+
+        # TODO return the action that the policy prescribes
+        raise NotImplementedError
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
@@ -106,7 +112,9 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         else:
             if self._deterministic:
                 ##  TODO output for a deterministic policy
-                action_distribution = TODO
+                logit = self._mean_net(observation)
+                action_distribution = action_distribution = distributions.Categorical(logits=logit)
+                
             else:
                 batch_mean = self._mean_net(observation)
                 scale_tril = torch.diag(torch.exp(self._logstd))
@@ -142,6 +150,10 @@ class MLPPolicyDeterministic(MLPPolicy):
         # TODO: update the policy and return the loss
         ## Hint you will need to use the q_fun for the loss
         ## Hint: do not update the parameters for q_fun in the loss
+        loss = -q_fun(observations, self(observations)).mean()
+        self._optimizer.zero_grad()
+        loss.backward()
+        self._optimizer.step()
         return loss.item()
     
 class MLPPolicyStochastic(MLPPolicy):
