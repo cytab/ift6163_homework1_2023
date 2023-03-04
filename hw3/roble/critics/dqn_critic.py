@@ -12,7 +12,8 @@ class DQNCritic(BaseCritic):
         super().__init__(**kwargs)
         self.env_name = hparams['env']['env_name']
         self.ob_dim = hparams['alg']['ob_dim']
-
+        print('.................................... ')
+        print(self.ob_dim)
         if isinstance(self.ob_dim, int):
             self.input_shape = (self.ob_dim,)
         else:
@@ -74,7 +75,8 @@ class DQNCritic(BaseCritic):
             # is being updated, but the Q-value for this action is obtained from the
             # target Q-network. Please review Lecture 8 for more details,
             # and page 4 of https://arxiv.org/pdf/1509.06461.pdf is also a good reference.
-            q_tp1 = qa_tp1_values.gather(1, torch.max(self.q_net(next_ob_no), 1)[1].unsqueeze(1)).max(1)[0]
+            q_next = self.q_net(next_ob_no)
+            q_tp1 = qa_tp1_values.gather(1, q_next.max(1)[1].squeeze(1)).max(1)[0]
             
         else:
             q_tp1, _ = qa_tp1_values.max(dim=1)

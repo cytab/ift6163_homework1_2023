@@ -93,8 +93,8 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             observation = obs[None]
 
         # TODO return the action that the policy prescribes
-        raise NotImplementedError
-
+        return self.forward(observation)
+    
     # update/train this policy
     def update(self, observations, actions, **kwargs):
         raise NotImplementedError
@@ -168,7 +168,9 @@ class MLPPolicyStochastic(MLPPolicy):
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         # TODO: sample actions from the gaussian distribrution given by MLPPolicy policy when providing the observations.
         # Hint: make sure to use the reparameterization trick to sample from the distribution
-        
+        obs = ptu.from_numpy(obs)
+        dist = self.forward(obs)
+        action = dist.rsample()
         return ptu.to_numpy(action)
         
     def update(self, observations, q_fun):

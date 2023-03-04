@@ -38,7 +38,7 @@ class TD3Critic(DDPGCritic):
         
         # TODO compute the Q-values from the target network 
         ## Hint: you will need to use the target policy
-        qa_tp1_values = self.q_net_target(next_ob_no, torch.clip((self.actor_target(next_ob_no) + torch.normal(0, self.num_actions*self.agent_params['alg']['td3_target_policy_noise'])), -self.num_actions, self.num_actions))
+        qa_tp1_values = self.q_net_target(next_ob_no, torch.clip((self.actor_target.get_action(next_ob_no) + torch.normal(0, self.num_actions*self.agent_params['alg']['td3_target_policy_noise'])), -self.num_actions, self.num_actions)).squeeze(1).max(1)[0]
 
         # TODO compute targets for minimizing Bellman error
         # HINT: as you saw in lecture, this would be:
@@ -59,6 +59,8 @@ class TD3Critic(DDPGCritic):
         }
 
     def update_target_network(self):
-        TODO
-        pass
+        for target_param, param in zip(
+                self.q_net_target.parameters(), self.q_net.parameters()
+        ):
+            target_param.data.copy_(param.data)
 

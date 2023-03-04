@@ -95,7 +95,7 @@ class DDPGCritic(BaseCritic):
         
         # TODO compute the Q-values from the target network 
         ## Hint: you will need to use the target policy
-        qa_tp1_values = self.q_net_target(next_ob_no, self.actor_target(next_ob_no))
+        qa_tp1_values = self.q_net_target(next_ob_no, self.actor_target.get_action(next_ob_no)).max(1)[0]
 
         # TODO compute targets for minimizing Bellman error
         # HINT: as you saw in lecture, this would be:

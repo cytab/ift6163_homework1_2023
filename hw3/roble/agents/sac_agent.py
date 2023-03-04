@@ -35,4 +35,26 @@ class SACAgent(DDPGAgent):
         """        
 
         # TODO: Take the code from DDPG Agent and make sure the remove the exploration noise
+        self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
+
+        # TODO add noise to the deterministic policy
+        perform_random_action = True if (self.t < self.learning_starts) else False
+        # HINT: take random action 
+        a = self.actor.get_action(self.replay_buffer.encode_recent_observation())
+        action = self.env.action_space.sample() if perform_random_action else np.clip((a + np.random.normal(0, self.num_actions*self.agent_params['alg']['td3_target_policy_noise'])), -self.num_actions, self.num_actions)
+        
+        # TODO take a step in the environment using the action from the policy
+        # HINT1: remember that self.last_obs must always point to the newest/latest observation
+        # HINT2: remember the following useful function that you've seen before:
+            #obs, reward, done, info = env.step(action)
+        self.last_obs, reward, done, info = self.env.step(action)
+
+        # TODO store the result of taking this action into the replay buffer
+        # HINT1: see your replay buffer's `store_effect` function
+        # HINT2: one of the arguments you'll need to pass in is self.replay_buffer_idx from above
+        self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
+
+        # TODO if taking this step resulted in done, reset the env (and the latest observation)
+        if done:
+            self.last_obs = self.env.reset()
         return
