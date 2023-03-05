@@ -85,15 +85,10 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 
     # query the policy with observation(s) to get selected action(s)
     def get_action(self, obs: np.ndarray) -> np.ndarray:
-        # TODO: 
-        ##
-        if len(obs.shape) > 1:
-            observation = obs
-        else:
-            observation = obs[None]
-
-        # TODO return the action that the policy prescribes
-        return self.forward(observation)
+        obs = ptu.from_numpy(obs)
+        dist = self.forward(obs)
+        action = dist.sample()
+        return ptu.to_numpy(action)
     
     # update/train this policy
     def update(self, observations, actions, **kwargs):
@@ -154,7 +149,7 @@ class MLPPolicyDeterministic(MLPPolicy):
         self._optimizer.zero_grad()
         loss.backward()
         self._optimizer.step()
-        return loss.item()
+        return loss.item(), self(observations)
     
 class MLPPolicyStochastic(MLPPolicy):
     """

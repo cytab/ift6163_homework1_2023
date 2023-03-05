@@ -188,11 +188,13 @@ class RL_Trainer(object):
                 print('\nBeginning logging procedure...')
                 if isinstance(self.agent, DQNAgent):
                     self.perform_dqn_logging(itr, all_logs)
+                elif isinstance(self.agent, DDPGAgent):
+                    self.perform_ddpg_logging(self, itr, all_logs)
                 else:
                     self.perform_logging(itr, paths, eval_policy, train_video_paths, all_logs)
 
-                if self.params['logging']['save_params']:
-                    self.agent.save('{}/agent_itr_{}.pt'.format(self.params['logging']['logdir'], itr))
+            if self.params['logging']['save_params']:
+                self.agent.save('{}/agent_itr_{}.pt'.format(self.params['logging']['logdir'], itr))
 
     ####################################
     ####################################
@@ -287,36 +289,46 @@ class RL_Trainer(object):
 
         self.logger.flush()
         
-    def perform_ddpg_logging(self):
-        
+    def perform_ddpg_logging(self, itr, all_logs):
+        last_log = all_logs[-1]
+
+        episode_rewards = get_wrapper_by_name(self.env, "Monitor").get_episode_rewards()
+        if len(episode_rewards) > 0:
+            self.mean_episode_reward = np.mean(episode_rewards[-100:])
+        if len(episode_rewards) > 100:
+            self.best_mean_episode_reward = max(self.best_mean_episode_reward, self.mean_episode_reward)
         logs = OrderedDict()
-        logs['QF Loss'] = np.mean(ptu.get_numpy(qf_loss))
+        
+        logs["Train_EnvstepsSoFar"] = self.agent.t
+        print("Timestep %d" % (self.agent.t,))
+        
+        logs['QF Loss'] = np.mean(ptu.get_numpy(last_log['Training loss']))
         logs['Policy Loss'] = np.mean(ptu.get_numpy(
-            policy_loss
+            last_log['Policy_loss']
         ))
-        logs['Raw Policy Loss'] = np.mean(ptu.get_numpy(
-            raw_policy_loss
-        ))
-        logs['Preactivation Policy Loss'] = (
-                logs['Policy Loss'] -
-                logs['Raw Policy Loss']
-        )
-        logs.update(create_stats_ordered_dict(
+        #logs['Raw Policy Loss'] = np.mean(ptu.get_numpy(
+        #    raw_policy_loss
+        #))
+        #logs['Preactivation Policy Loss'] = (
+        #        logs['Policy Loss'] -
+        #        logs['Raw Policy Loss']
+        #)
+        logs.update({
             'Q Predictions',
-            ptu.get_numpy(q_pred),
-        ))
-        logs.update(create_stats_ordered_dict(
+            last_log['Q prediction'],
+        })
+        logs.update({
             'Q Targets',
-            ptu.get_numpy(q_target),
-        ))
-        logs.update(create_stats_ordered_dict(
-            'Bellman Errors',
-            ptu.get_numpy(bellman_errors),
-        ))
-        logs.update(create_stats_ordered_dict(
+            last_log['Q targets'],
+        })
+        logs.update({
+            'Bellman Error',
+            last_log['Bellman error'],
+        })
+        logs.update({
             'Policy Action',
-            ptu.get_numpy(policy_actions),
-        ))
+            last_log['Policy action'],
+        })
         
         for key, value in logs.items():
                 print('{} : {}'.format(key, value))

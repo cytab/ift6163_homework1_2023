@@ -113,6 +113,9 @@ class DDPGCritic(BaseCritic):
         self.learning_rate_scheduler.step()
         return {
             'Training Loss': ptu.to_numpy(loss),
+            'Q prediction': qa_t_values.mean(),
+            'Q target': target.mean(),
+            'Bellman error ': (qa_t_values- target).mean(),
         }
 
     def update_target_network(self):
