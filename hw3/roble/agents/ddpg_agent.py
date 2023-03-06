@@ -99,10 +99,10 @@ class DDPGAgent(object):
             # TODO fill in the call to the update function using the appropriate tensors
             ## Hint the actor will need a copy of the q_net to maximize the Q-function
             loss, action = self.actor.update(ob_no, copy.deepcopy(self.q_fun))
-            log |= {'Policy loss' : loss
-                    }
-            log |= {'Policy action' : action
-                    }
+            log['Policy loss'] = loss
+                    
+            log['Policy action'] = action.mean()
+                    
             
             # TODO update the target network periodically 
             # HINT: your critic already has this functionality implemented

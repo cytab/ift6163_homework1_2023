@@ -16,7 +16,7 @@ class DDPGCritic(BaseCritic):
         self.env_name = hparams['env']['env_name']
         self.ob_dim = hparams['alg']['ob_dim']
         self.learning_rate = hparams['alg']['critic_learning_rate']
-
+        self.hparams = hparams
         if isinstance(self.ob_dim, int):
             self.input_shape = (self.ob_dim,)
         else:
@@ -52,7 +52,7 @@ class DDPGCritic(BaseCritic):
             nn_baseline=False,
             deterministic=True
             )
-        # self.learning_rate_scheduler = optim.lr_scheduler.LambdaLR(
+        #self.learning_rate_scheduler = optim.lr_scheduler.LambdaLR(
         #     self.optimizer,
         #     self.optimizer_spec.learning_rate_schedule,
         # 
@@ -85,37 +85,38 @@ class DDPGCritic(BaseCritic):
         """
         ob_no = ptu.from_numpy(ob_no)
         ac_na = ptu.from_numpy(ac_na)
-        next_ob_no = ptu.from_numpy(next_ob_no)
+        next_ob_no_ten = ptu.from_numpy(next_ob_no)
         reward_n = ptu.from_numpy(reward_n)
         terminal_n = ptu.from_numpy(terminal_n)
         
         ### Hint: 
         # qa_t_values = self.q_net(ob_no, ac_na)
         qa_t_values = self.q_net(ob_no, ac_na)
-        
         # TODO compute the Q-values from the target network 
         ## Hint: you will need to use the target policy
-        qa_tp1_values = self.q_net_target(next_ob_no, self.actor_target.get_action(next_ob_no)).max(1)[0]
-
+        qa_tp1_values = self.q_net_target(next_ob_no_ten, ptu.from_numpy(self.actor_target.get_action(next_ob_no)).reshape(-1,1)).max(1)[0]
+        
         # TODO compute targets for minimizing Bellman error
         # HINT: as you saw in lecture, this would be:
             #currentReward + self.gamma * qValuesOfNextTimestep * (not terminal)
-        target = reward_n + self.gamma*qa_tp1_values*(1-terminal_n)
-        target = target.detach()
         
-        assert qa_t_values.shape == target.shape
-        loss = self.loss(qa_t_values, target)
+        target = reward_n + self.gamma*qa_tp1_values*(1-terminal_n)
+        
+        target = target.detach()
+        q_t_values = qa_t_values.squeeze(1)
+        assert q_t_values.shape == target.shape
+        loss = self.loss(q_t_values, target)
 
         self.optimizer.zero_grad()
         loss.backward()
         utils.clip_grad_value_(self.q_net.parameters(), self.grad_norm_clipping)
         self.optimizer.step()
-        self.learning_rate_scheduler.step()
+        #self.learning_rate_scheduler.step()
         return {
             'Training Loss': ptu.to_numpy(loss),
-            'Q prediction': qa_t_values.mean(),
-            'Q target': target.mean(),
-            'Bellman error ': (qa_t_values- target).mean(),
+            'Q prediction': ptu.to_numpy(qa_t_values).mean(),
+            'Q target': ptu.to_numpy(target).mean(),
+            'Bellman error': ptu.to_numpy((qa_t_values- target)).mean(),
         }
 
     def update_target_network(self):
@@ -123,15 +124,15 @@ class DDPGCritic(BaseCritic):
                 self.q_net_target.parameters(), self.q_net.parameters()
         ):
             ## Perform Polyak averaging
-            y = target_param.data.copy(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
         for target_param, param in zip(
                 self.actor_target.parameters(), self.actor.parameters()
         ):
             ## Perform Polyak averaging for the target policy
-            y = target_param.data.copy(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
 
     def qa_values(self, obs):
-        obs = ptu.from_numpy(obs)
         ## HINT: the q function take two arguments  
-        qa_values = self.q_net(obs, self.actor(obs))
-        return ptu.to_numpy(qa_values)
+        action = ptu.from_numpy(self.actor.get_action(obs).reshape(-1,1))
+        qa_values = self.q_net(ptu.from_numpy(obs), action)
+        return qa_values, action

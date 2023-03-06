@@ -181,7 +181,7 @@ class RL_Trainer(object):
             if itr % print_period == 0:
                 print("\nTraining agent...")
             all_logs = self.train_agent()
-
+            print(all_logs)
             # log/save
             if self.logvideo or self.logmetrics:
                 # perform logging
@@ -189,7 +189,7 @@ class RL_Trainer(object):
                 if isinstance(self.agent, DQNAgent):
                     self.perform_dqn_logging(itr, all_logs)
                 elif isinstance(self.agent, DDPGAgent):
-                    self.perform_ddpg_logging(self, itr, all_logs)
+                    self.perform_ddpg_logging(itr, all_logs)
                 else:
                     self.perform_logging(itr, paths, eval_policy, train_video_paths, all_logs)
 
@@ -291,50 +291,45 @@ class RL_Trainer(object):
         
     def perform_ddpg_logging(self, itr, all_logs):
         last_log = all_logs[-1]
-
-        episode_rewards = get_wrapper_by_name(self.env, "Monitor").get_episode_rewards()
-        if len(episode_rewards) > 0:
-            self.mean_episode_reward = np.mean(episode_rewards[-100:])
-        if len(episode_rewards) > 100:
-            self.best_mean_episode_reward = max(self.best_mean_episode_reward, self.mean_episode_reward)
         logs = OrderedDict()
         
         logs["Train_EnvstepsSoFar"] = self.agent.t
         print("Timestep %d" % (self.agent.t,))
-        
-        logs['QF Loss'] = np.mean(ptu.get_numpy(last_log['Training loss']))
-        logs['Policy Loss'] = np.mean(ptu.get_numpy(
-            last_log['Policy_loss']
-        ))
-        #logs['Raw Policy Loss'] = np.mean(ptu.get_numpy(
-        #    raw_policy_loss
-        #))
-        #logs['Preactivation Policy Loss'] = (
-        #        logs['Policy Loss'] -
-        #        logs['Raw Policy Loss']
-        #)
-        logs.update({
-            'Q Predictions',
-            last_log['Q prediction'],
-        })
-        logs.update({
-            'Q Targets',
-            last_log['Q targets'],
-        })
-        logs.update({
-            'Bellman Error',
-            last_log['Bellman error'],
-        })
-        logs.update({
-            'Policy Action',
-            last_log['Policy action'],
-        })
-        
-        for key, value in logs.items():
-                print('{} : {}'.format(key, value))
-                self.logger.log_scalar(value, key, itr)
-        self.logger.log_file(itr, logs)
-        print('Done DDPG logging...\n\n')
+        if len(last_log) != 0:
+            logs['QF Loss'] = np.mean(last_log["Training Loss"])
+            logs['Policy Loss'] = np.mean(
+                last_log["Policy loss"]
+            )
+            #logs['Raw Policy Loss'] = np.mean(ptu.get_numpy(
+            #    raw_policy_loss
+            #))
+            #logs['Preactivation Policy Loss'] = (
+            #        logs['Policy Loss'] -
+            #        logs['Raw Policy Loss']
+            #)
+            logs.update({
+                'Q Predictions':
+                last_log['Q prediction'],
+            })
+            logs.update({
+                'Q Targets':
+                last_log['Q target'],
+            })
+            logs.update({
+                'Bellman Error':
+                last_log['Bellman error'],
+            })
+            logs.update({
+                'Policy Action':
+                last_log['Policy action'],
+            })
+            sys.stdout.flush()
+            for key, value in logs.items():
+                    print('{} : {}'.format(key, value))
+                    self.logger.log_scalar(value, key, itr)
+            self.logger.log_file(itr, logs)
+            print('Done DDPG logging...\n\n')
+            self.logger.flush()
 
     def perform_logging(self, itr, paths, eval_policy, train_video_paths, all_logs):
         

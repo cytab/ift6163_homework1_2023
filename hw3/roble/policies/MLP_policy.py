@@ -86,8 +86,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # query the policy with observation(s) to get selected action(s)
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         obs = ptu.from_numpy(obs)
-        dist = self.forward(obs)
-        action = dist.sample()
+        action = self.forward(obs)
         return ptu.to_numpy(action)
     
     # update/train this policy
@@ -108,7 +107,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             if self._deterministic:
                 ##  TODO output for a deterministic policy
                 logit = self._mean_net(observation)
-                action_distribution = action_distribution = distributions.Categorical(logits=logit)
+                action_distribution = logit
                 
             else:
                 batch_mean = self._mean_net(observation)
@@ -145,11 +144,12 @@ class MLPPolicyDeterministic(MLPPolicy):
         # TODO: update the policy and return the loss
         ## Hint you will need to use the q_fun for the loss
         ## Hint: do not update the parameters for q_fun in the loss
-        loss = -q_fun(observations, self(observations)).mean()
+        loss, action = q_fun.qa_values(observations)
+        loss = -loss.mean()
         self._optimizer.zero_grad()
         loss.backward()
         self._optimizer.step()
-        return loss.item(), self(observations)
+        return loss.item(), ptu.to_numpy(action)
     
 class MLPPolicyStochastic(MLPPolicy):
     """
