@@ -1,6 +1,6 @@
 from .base_critic import BaseCritic
 import torch
-import torch.optim as optim
+import torch.optim as optim   
 from torch.nn import utils
 from torch import nn
 
@@ -76,7 +76,7 @@ class DQNCritic(BaseCritic):
             # target Q-network. Please review Lecture 8 for more details,
             # and page 4 of https://arxiv.org/pdf/1509.06461.pdf is also a good reference.
             q_next = self.q_net(next_ob_no)
-            q_tp1 = qa_tp1_values.gather(1, q_next.max(1)[1].squeeze(1)).max(1)[0]
+            q_tp1 = qa_tp1_values.gather(1, q_next.max(1)[1].unsqueeze(1)).squeeze()
             
         else:
             q_tp1, _ = qa_tp1_values.max(dim=1)

@@ -183,3 +183,23 @@ def add_noise(data_inp, noiseToSignal=0.01):
             0, np.absolute(std_of_noise[j]), (data.shape[0],)))
 
     return data
+
+def add_noise_centered(data_inp, noiseToSignal=0.01):
+
+    data = copy.deepcopy(data_inp) #(num data points, dim)
+
+    #mean of data
+    mean_data = np.mean(data, axis=0)
+
+    #if mean is 0,
+    #make it 0.001 to avoid 0 issues later for dividing by std
+    mean_data[mean_data == 0] = 0.000001
+
+    #width of normal distribution to sample noise from
+    #larger magnitude number = could have larger magnitude noise
+    std_of_noise = noiseToSignal
+    for j in range(mean_data.shape[0]):
+        data[:, j] = np.copy(data[:, j] + np.random.normal(
+            0, np.absolute(std_of_noise), (data.shape[0],)))
+
+    return data

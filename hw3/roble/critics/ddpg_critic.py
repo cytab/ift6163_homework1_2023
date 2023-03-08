@@ -94,7 +94,7 @@ class DDPGCritic(BaseCritic):
         qa_t_values = self.q_net(ob_no, ac_na)
         # TODO compute the Q-values from the target network 
         ## Hint: you will need to use the target policy
-        qa_tp1_values = self.q_net_target(next_ob_no_ten, ptu.from_numpy(self.actor_target.get_action(next_ob_no)).reshape(-1,1)).max(1)[0]
+        qa_tp1_values = self.q_net_target(next_ob_no_ten, self.actor_target(next_ob_no_ten)).max(1)[0]
         
         # TODO compute targets for minimizing Bellman error
         # HINT: as you saw in lecture, this would be:
@@ -112,11 +112,13 @@ class DDPGCritic(BaseCritic):
         utils.clip_grad_value_(self.q_net.parameters(), self.grad_norm_clipping)
         self.optimizer.step()
         #self.learning_rate_scheduler.step()
-        return {
+        return {'Critic':{
             'Training Loss': ptu.to_numpy(loss),
-            'Q prediction': ptu.to_numpy(qa_t_values).mean(),
-            'Q target': ptu.to_numpy(target).mean(),
-            'Bellman error': ptu.to_numpy((qa_t_values- target)).mean(),
+            'Q Predictions': ptu.to_numpy(q_t_values),
+            'Q Targets': ptu.to_numpy(target),
+            'Policy Actions': ptu.to_numpy(ac_na),
+            'Actor Actions': ptu.to_numpy(self.actor(ob_no)),
+            }
         }
 
     def update_target_network(self):
@@ -132,7 +134,8 @@ class DDPGCritic(BaseCritic):
             y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
 
     def qa_values(self, obs):
+        observation = ptu.from_numpy(obs)
         ## HINT: the q function take two arguments  
-        action = ptu.from_numpy(self.actor.get_action(obs).reshape(-1,1))
-        qa_values = self.q_net(ptu.from_numpy(obs), action)
-        return qa_values, action
+        predicted_action = self.actor(observation)
+        qa_values = self.q_net(observation, predicted_action)
+        return qa_values

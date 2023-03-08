@@ -114,6 +114,7 @@ class RL_Trainer(object):
 
         # agent_class = self.params['agent_class']
         self.agent = agent_class(self.env, self.params)
+        self.best_mean_episode_reward =0
 
     def run_training_loop(self, n_iter, collect_policy, eval_policy,
                           initial_expertdata=None, relabel_with_expert=False,
@@ -292,38 +293,59 @@ class RL_Trainer(object):
     def perform_ddpg_logging(self, itr, all_logs):
         last_log = all_logs[-1]
         logs = OrderedDict()
-        
+        print(self.agent.rewards)
         logs["Train_EnvstepsSoFar"] = self.agent.t
-        print("Timestep %d" % (self.agent.t,))
-        if len(last_log) != 0:
-            logs['QF Loss'] = np.mean(last_log["Training Loss"])
-            logs['Policy Loss'] = np.mean(
-                last_log["Policy loss"]
-            )
-            #logs['Raw Policy Loss'] = np.mean(ptu.get_numpy(
-            #    raw_policy_loss
-            #))
-            #logs['Preactivation Policy Loss'] = (
-            #        logs['Policy Loss'] -
-            #        logs['Raw Policy Loss']
-            #)
-            logs.update({
-                'Q Predictions':
-                last_log['Q prediction'],
-            })
-            logs.update({
-                'Q Targets':
-                last_log['Q target'],
-            })
-            logs.update({
-                'Bellman Error':
-                last_log['Bellman error'],
-            })
-            logs.update({
-                'Policy Action':
-                last_log['Policy action'],
-            })
-            sys.stdout.flush()
+        n = 5
+        if len(self.agent.rewards) > 0:
+            self.mean_episode_reward = np.mean(np.array(self.agent.rewards)[-n:])
+            
+            logs["Train_AverageReturn"] = self.mean_episode_reward
+            logs["Train_CurrentReturn"] = self.agent.rewards[-1]
+            
+        if len(self.agent.rewards) > n:
+            self.best_mean_episode_reward = max(self.best_mean_episode_reward, self.mean_episode_reward)
+            
+            logs["Train_BestReturn"] = self.best_mean_episode_reward
+            
+        if len(self.agent.rewards) > 5 * n:   
+            self.agent.rewards = self.agent.rewards[n:]
+            
+        if self.start_time is not None:
+            time_since_start = (time.time() - self.start_time)
+            logs["TimeSinceStart"] = time_since_start
+        
+        Q_predictions = []
+        Q_targets = []
+        policy_actions_mean = []
+        policy_actions_std = []
+        actor_actions_mean = []
+        critic_loss = []
+        actor_loss = []
+        print_all_logs = True
+        
+        for log in all_logs:
+            if len(log) > 0:
+                print_all_logs = True
+                Q_predictions.append(np.mean(log["Critic"]["Q Predictions"]))
+                Q_targets.append(np.mean((log["Critic"]["Q Targets"])))
+                policy_actions_mean.append(np.mean((log["Critic"]["Policy Actions"])))
+                policy_actions_std.append(np.std((log["Critic"]["Policy Actions"])))
+                actor_actions_mean.append(np.mean((log["Critic"]["Actor Actions"])))
+                critic_loss.append(log["Critic"]["Training Loss"])
+                
+                if "Actor" in log.keys():
+                    actor_loss.append(log["Actor"])
+                    
+        if print_all_logs:
+            logs["Q_Predictions"] = np.mean(np.array(Q_predictions))
+            logs["Q_Targets"] = np.mean(np.array(Q_targets))
+            logs["Policy_Actions_Mean"] = np.mean(np.array(policy_actions_mean))
+            logs["Policy_Actions_Std"] = np.mean(np.array(policy_actions_std))
+            logs["Actor_Actions"] = np.mean(np.array(actor_actions_mean))
+            logs["Critic_Loss"] = np.mean(np.array(critic_loss))
+            if len(actor_loss) > 0:
+                logs["Actor_Loss"] = np.mean(np.array(actor_loss))
+                
             for key, value in logs.items():
                     print('{} : {}'.format(key, value))
                     self.logger.log_scalar(value, key, itr)

@@ -14,7 +14,8 @@ class DDPGAgent(object):
         print ("agent_params", agent_params)
         self.batch_size = agent_params['alg']['train_batch_size']
         self.last_obs = self.env.reset()
-
+        self.cumulated_rewards = 0
+        self.rewards = []
         self.num_actions = self.env.action_space.shape[0]
         self.learning_starts = agent_params['alg']['learning_starts']
         self.learning_freq = agent_params['alg']['learning_freq']
@@ -41,6 +42,7 @@ class DDPGAgent(object):
             continuous_actions=True, ac_dim=self.agent_params['alg']['ac_dim'])
         self.t = 0
         self.num_param_updates = 0
+        self.step_counter = 0
         
     def add_to_replay_buffer(self, paths):
         pass
@@ -63,13 +65,13 @@ class DDPGAgent(object):
         # HINT: take random action 
         a = self.actor.get_action(self.replay_buffer.encode_recent_observation())
         action = self.env.action_space.sample() if perform_random_action else np.clip((a + np.random.normal(0, self.num_actions*self.agent_params['alg']['td3_target_policy_noise'])), -self.num_actions, self.num_actions)
-        
+
         # TODO take a step in the environment using the action from the policy
         # HINT1: remember that self.last_obs must always point to the newest/latest observation
         # HINT2: remember the following useful function that you've seen before:
             #obs, reward, done, info = env.step(action)
         self.last_obs, reward, done, info = self.env.step(action)
-
+        self.cumulated_rewards += reward
         # TODO store the result of taking this action into the replay buffer
         # HINT1: see your replay buffer's `store_effect` function
         # HINT2: one of the arguments you'll need to pass in is self.replay_buffer_idx from above
@@ -78,6 +80,9 @@ class DDPGAgent(object):
         # TODO if taking this step resulted in done, reset the env (and the latest observation)
         if done:
             self.last_obs = self.env.reset()
+            self.rewards.append(self.cumulated_rewards)
+            self.cumulated_rewards = 0
+            
 
     def sample(self, batch_size):
         if self.replay_buffer.can_sample(self.batch_size):
@@ -98,10 +103,8 @@ class DDPGAgent(object):
             
             # TODO fill in the call to the update function using the appropriate tensors
             ## Hint the actor will need a copy of the q_net to maximize the Q-function
-            loss, action = self.actor.update(ob_no, copy.deepcopy(self.q_fun))
-            log['Policy loss'] = loss
-                    
-            log['Policy action'] = action.mean()
+            loss = self.actor.update(ob_no, copy.deepcopy(self.q_fun))
+            log['Actor'] = loss
                     
             
             # TODO update the target network periodically 
