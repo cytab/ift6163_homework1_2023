@@ -70,6 +70,15 @@ class RL_Trainer(object):
             )
             self.mean_episode_reward = -float('nan')
             self.best_mean_episode_reward = -float('inf')
+        else :
+            self.env = wrappers.Monitor(
+                self.env,
+                os.path.join(self.params['logging']['logdir'], "gym"),
+                force=True,
+                video_callable=(None if self.params['logging']['video_log_freq'] > 0 else False),
+            )
+            self.mean_episode_reward = -float('nan')
+            self.best_mean_episode_reward = -float('inf')
 
         self.env.seed(seed)
 
@@ -190,7 +199,7 @@ class RL_Trainer(object):
                 if isinstance(self.agent, DQNAgent):
                     self.perform_dqn_logging(itr, all_logs)
                 elif isinstance(self.agent, DDPGAgent):
-                    self.perform_ddpg_logging(itr, all_logs)
+                    self.perform_ddpg_logging(itr, all_logs, train_video_paths)
                 else:
                     self.perform_logging(itr, paths, eval_policy, train_video_paths, all_logs)
 
@@ -290,7 +299,7 @@ class RL_Trainer(object):
 
         self.logger.flush()
         
-    def perform_ddpg_logging(self, itr, all_logs):
+    def perform_ddpg_logging(self, itr, all_logs, train_video_paths):
         last_log = all_logs[-1]
         logs = OrderedDict()
         print(self.agent.rewards)
@@ -351,6 +360,7 @@ class RL_Trainer(object):
                     self.logger.log_scalar(value, key, itr)
             self.logger.log_file(itr, logs)
             print('Done DDPG logging...\n\n')
+            
             self.logger.flush()
 
     def perform_logging(self, itr, paths, eval_policy, train_video_paths, all_logs):

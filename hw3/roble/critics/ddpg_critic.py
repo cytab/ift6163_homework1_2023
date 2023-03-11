@@ -85,7 +85,7 @@ class DDPGCritic(BaseCritic):
         """
         ob_no = ptu.from_numpy(ob_no)
         ac_na = ptu.from_numpy(ac_na)
-        next_ob_no_ten = ptu.from_numpy(next_ob_no)
+        next_ob_no = ptu.from_numpy(next_ob_no)
         reward_n = ptu.from_numpy(reward_n)
         terminal_n = ptu.from_numpy(terminal_n)
         
@@ -94,12 +94,12 @@ class DDPGCritic(BaseCritic):
         qa_t_values = self.q_net(ob_no, ac_na)
         # TODO compute the Q-values from the target network 
         ## Hint: you will need to use the target policy
-        qa_tp1_values = self.q_net_target(next_ob_no_ten, self.actor_target(next_ob_no_ten)).max(1)[0]
+        qa_tp1_values = self.q_net_target(next_ob_no, self.actor_target(next_ob_no)).squeeze(1)
         
         # TODO compute targets for minimizing Bellman error
         # HINT: as you saw in lecture, this would be:
             #currentReward + self.gamma * qValuesOfNextTimestep * (not terminal)
-        
+
         target = reward_n + self.gamma*qa_tp1_values*(1-terminal_n)
         
         target = target.detach()
@@ -126,12 +126,12 @@ class DDPGCritic(BaseCritic):
                 self.q_net_target.parameters(), self.q_net.parameters()
         ):
             ## Perform Polyak averaging
-            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            y = target_param.data.copy_(1 - self.hparams['alg']['polyak_avg']*param.data + (self.hparams['alg']['polyak_avg'])*target_param.data)
         for target_param, param in zip(
                 self.actor_target.parameters(), self.actor.parameters()
         ):
             ## Perform Polyak averaging for the target policy
-            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            y = target_param.data.copy_(1- self.hparams['alg']['polyak_avg']*param.data + (self.hparams['alg']['polyak_avg'])*target_param.data)
 
     def qa_values(self, obs):
         observation = ptu.from_numpy(obs)

@@ -108,7 +108,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                 ##  TODO output for a deterministic policy
                 logit = self._mean_net(observation)
                 action_distribution = logit
-                
             else:
                 batch_mean = self._mean_net(observation)
                 scale_tril = torch.diag(torch.exp(self._logstd))
@@ -148,7 +147,6 @@ class MLPPolicyDeterministic(MLPPolicy):
         actor_loss = -loss.mean()
         self._optimizer.zero_grad()
         actor_loss.backward()
-        nn.utils.clip_grad_norm_(self._mean_net.parameters(), self.grad_norm_clipping)
         self._optimizer.step()
         return actor_loss.item()
     
