@@ -64,7 +64,7 @@ class DDPGAgent(object):
         perform_random_action = True if (self.t < self.learning_starts) else False
         # HINT: take random action 
         a = self.actor.get_action(self.replay_buffer.encode_recent_observation())
-        action = self.env.action_space.sample() if perform_random_action else np.clip((a + np.random.normal(0, self.num_actions*self.agent_params['alg']['td3_target_policy_noise'])), -self.num_actions, self.num_actions)
+        action = self.env.action_space.sample() if perform_random_action else np.clip((a + 0.5*np.random.normal(0, self.num_actions)), -self.num_actions, self.num_actions)
 
         # TODO take a step in the environment using the action from the policy
         # HINT1: remember that self.last_obs must always point to the newest/latest observation

@@ -191,7 +191,6 @@ class RL_Trainer(object):
             if itr % print_period == 0:
                 print("\nTraining agent...")
             all_logs = self.train_agent()
-            print(all_logs)
             # log/save
             if self.logvideo or self.logmetrics:
                 # perform logging
@@ -199,7 +198,7 @@ class RL_Trainer(object):
                 if isinstance(self.agent, DQNAgent):
                     self.perform_dqn_logging(itr, all_logs)
                 elif isinstance(self.agent, DDPGAgent):
-                    self.perform_ddpg_logging(itr, all_logs, train_video_paths)
+                    self.perform_ddpg_logging(itr, all_logs)
                 else:
                     self.perform_logging(itr, paths, eval_policy, train_video_paths, all_logs)
 

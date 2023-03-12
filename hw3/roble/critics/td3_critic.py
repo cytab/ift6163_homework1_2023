@@ -59,11 +59,20 @@ class TD3Critic(DDPGCritic):
         #self.learning_rate_scheduler.step()
         return {
             'Training Loss': ptu.to_numpy(loss),
+            'Q Predictions': ptu.to_numpy(qa_t_values),
+            'Q Targets': ptu.to_numpy(target),
+            'Policy Actions': ptu.to_numpy(ac_na),
+            'Actor Actions': ptu.to_numpy(self.actor(ob_no)),
         }
 
     def update_target_network(self):
         for target_param, param in zip(
                 self.q_net_target.parameters(), self.q_net.parameters()
         ):
-            target_param.data.copy_(param.data)
+            target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            
+        for target_param, param in zip(
+                self.actor_target.parameters(), self.actor.parameters()
+        ):
+            target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
 

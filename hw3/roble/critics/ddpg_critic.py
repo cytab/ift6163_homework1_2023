@@ -126,12 +126,12 @@ class DDPGCritic(BaseCritic):
                 self.q_net_target.parameters(), self.q_net.parameters()
         ):
             ## Perform Polyak averaging
-            y = target_param.data.copy_(1 - self.hparams['alg']['polyak_avg']*param.data + (self.hparams['alg']['polyak_avg'])*target_param.data)
+            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
         for target_param, param in zip(
                 self.actor_target.parameters(), self.actor.parameters()
         ):
             ## Perform Polyak averaging for the target policy
-            y = target_param.data.copy_(1- self.hparams['alg']['polyak_avg']*param.data + (self.hparams['alg']['polyak_avg'])*target_param.data)
+            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
 
     def qa_values(self, obs):
         observation = ptu.from_numpy(obs)

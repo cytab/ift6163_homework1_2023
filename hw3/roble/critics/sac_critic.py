@@ -34,17 +34,18 @@ class SACCritic(DDPGCritic):
         reward_n = ptu.from_numpy(reward_n)
         terminal_n = ptu.from_numpy(terminal_n)
 
-        qa_t_values = self.q_net(ob_no)
+        qa_t_values = self.q_net(ob_no, ac_na)
         
         # TODO compute the Q-values from the target network 
         ## Hint: you will need to use the target policy
-        qa_tp1_values = self.q_net_target(next_ob_no, self.actor_target.get_action(next_ob_no))
+        action, log_action = self.actor_target.get_action(next_ob_no)
+        qa_tp1_values = self.q_net_target(next_ob_no, action) 
 
         # TODO add the entropy term to the Q-values
         ## Hint: you will need the use the lob_prob function from the distribution of the actor policy
         ## Hint: use the self.hparams['alg']['sac_entropy_coeff'] value for the entropy term
-        next_actions = self.actor_target.get_action(next_ob_no)
-        qa_tp1_values_reg = TODO
+        
+        qa_tp1_values_reg = qa_tp1_values - self.hparams['alg']['sac_entropy_coeff']*log_action 
 
         # TODO compute targets for minimizing Bellman error
         # HINT: as you saw in lecture, this would be:

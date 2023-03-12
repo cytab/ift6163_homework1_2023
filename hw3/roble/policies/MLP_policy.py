@@ -165,13 +165,20 @@ class MLPPolicyStochastic(MLPPolicy):
         obs = ptu.from_numpy(obs)
         dist = self.forward(obs)
         action = dist.rsample()
-        return ptu.to_numpy(action)
+        log = dist.log_prob(action)
+        return ptu.to_numpy(action), log
         
     def update(self, observations, q_fun):
         # TODO: update the policy and return the loss
         ## Hint you will need to use the q_fun for the loss
         ## Hint: do not update the parameters for q_fun in the loss
         ## Hint: you will have to add the entropy term to the loss using self.entropy_coeff
+        action, log_action = self.get_action(observations)
+        q = q_fun.q_net(observations, action)
+        loss = (self.entropy_coeff*log_action - q).mean()
+        self._optimizer.zero_grad()
+        loss.backward()
+        self._optimizer.step()
         return loss.item()
     
 #####################################################
