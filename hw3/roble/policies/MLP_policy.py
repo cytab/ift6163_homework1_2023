@@ -162,8 +162,7 @@ class MLPPolicyStochastic(MLPPolicy):
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         # TODO: sample actions from the gaussian distribrution given by MLPPolicy policy when providing the observations.
         # Hint: make sure to use the reparameterization trick to sample from the distribution
-        obs = ptu.from_numpy(obs)
-        dist = self.forward(obs)
+        dist = self.forward(ptu.from_numpy(obs))
         action = dist.rsample()
         log = dist.log_prob(action)
         return ptu.to_numpy(action), log
@@ -174,7 +173,7 @@ class MLPPolicyStochastic(MLPPolicy):
         ## Hint: do not update the parameters for q_fun in the loss
         ## Hint: you will have to add the entropy term to the loss using self.entropy_coeff
         action, log_action = self.get_action(observations)
-        q = q_fun.q_net(observations, action)
+        q = q_fun.q_net(ptu.from_numpy(observations), ptu.from_numpy(action))
         loss = (self.entropy_coeff*log_action - q).mean()
         self._optimizer.zero_grad()
         loss.backward()

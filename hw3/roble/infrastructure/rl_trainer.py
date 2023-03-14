@@ -298,7 +298,7 @@ class RL_Trainer(object):
 
         self.logger.flush()
         
-    def perform_ddpg_logging(self, itr, all_logs, train_video_paths):
+    def perform_ddpg_logging(self, itr, all_logs):
         last_log = all_logs[-1]
         logs = OrderedDict()
         print(self.agent.rewards)

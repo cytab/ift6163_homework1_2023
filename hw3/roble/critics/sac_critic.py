@@ -29,7 +29,7 @@ class SACCritic(DDPGCritic):
                 nothing
         """
         ob_no = ptu.from_numpy(ob_no)
-        ac_na = ptu.from_numpy(ac_na).to(torch.long)
+        ac_na = ptu.from_numpy(ac_na)
         next_ob_no = ptu.from_numpy(next_ob_no)
         reward_n = ptu.from_numpy(reward_n)
         terminal_n = ptu.from_numpy(terminal_n)
@@ -38,31 +38,36 @@ class SACCritic(DDPGCritic):
         
         # TODO compute the Q-values from the target network 
         ## Hint: you will need to use the target policy
-        action, log_action = self.actor_target.get_action(next_ob_no)
-        qa_tp1_values = self.q_net_target(next_ob_no, action) 
+        action, log_action = self.actor_target.get_action(ptu.to_numpy(next_ob_no))
+        qa_tp1_values = self.q_net_target(next_ob_no, ptu.from_numpy(action)) 
 
         # TODO add the entropy term to the Q-values
         ## Hint: you will need the use the lob_prob function from the distribution of the actor policy
         ## Hint: use the self.hparams['alg']['sac_entropy_coeff'] value for the entropy term
         
-        qa_tp1_values_reg = qa_tp1_values - self.hparams['alg']['sac_entropy_coeff']*log_action 
+        qa_tp1_values_reg = qa_tp1_values.squeeze(1) - self.hparams['alg']['sac_entropy_coeff']*log_action 
 
         # TODO compute targets for minimizing Bellman error
         # HINT: as you saw in lecture, this would be:
             #currentReward + self.gamma * qValuesOfNextTimestep * (not terminal)
-        target = reward_n + self.gamma*qa_tp1_values*(1-terminal_n)
+        target = reward_n + self.gamma*qa_tp1_values_reg*(1-terminal_n)
         target = target.detach()
-
-        assert qa_t_values.shape == target.shape
-        loss = self.loss(qa_t_values, target)
+        q_t_values = qa_t_values.squeeze(1)
+        assert q_t_values.shape == target.shape
+        loss = self.loss(q_t_values, target)
 
         self.optimizer.zero_grad()
         loss.backward()
         utils.clip_grad_value_(self.q_net.parameters(), self.grad_norm_clipping)
         self.optimizer.step()
-        self.learning_rate_scheduler.step()
-        return {
+#        self.learning_rate_scheduler.step()
+        return {'Critic':{
             'Training Loss': ptu.to_numpy(loss),
+            'Q Predictions': ptu.to_numpy(q_t_values),
+            'Q Targets': ptu.to_numpy(target),
+            'Policy Actions': ptu.to_numpy(ac_na),
+            'Actor Actions': self.actor.get_action(ptu.to_numpy(ob_no))[0],
+            }
         }
 
     def update_target_network(self):
@@ -70,10 +75,11 @@ class SACCritic(DDPGCritic):
                 self.q_net_target.parameters(), self.q_net.parameters()
         ):
             ## Perform Polyak averaging
-            y = target_param.data.copy(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            target_param.data.mul_(1 - self.hparams['alg']['polyak_avg'])
+            target_param.data.add_((self.hparams['alg']['polyak_avg']) * param.data)
         for target_param, param in zip(
                 self.actor_target.parameters(), self.actor.parameters()
         ):
             ## Perform Polyak averaging for the target policy
-            y = target_param.data.copy(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
-
+            target_param.data.mul_(self.hparams['alg']['polyak_avg'])
+            target_param.data.add_((1 - self.hparams['alg']['polyak_avg']) * param.data)
