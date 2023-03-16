@@ -143,11 +143,16 @@ class MLPPolicyDeterministic(MLPPolicy):
         # TODO: update the policy and return the loss
         ## Hint you will need to use the q_fun for the loss
         ## Hint: do not update the parameters for q_fun in the loss
-        loss = q_fun.qa_values(observations)
+        obs = ptu.from_numpy(observations)
+        action = self.forward(obs)
+        
+        loss = q_fun.q_net(obs, action)
+        
         actor_loss = -loss.mean()
         self._optimizer.zero_grad()
         actor_loss.backward()
         self._optimizer.step()
+        
         return actor_loss.item()
     
 class MLPPolicyStochastic(MLPPolicy):
