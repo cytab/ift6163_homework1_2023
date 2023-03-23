@@ -3,10 +3,9 @@ env:
     task_name: 'gcrl' # ['gcrl','gclr_v2', 'hrl']
     max_episode_length: 200
     exp_name: 'todo'
-    atari: True
 
 alg:
-    double_q: True
+    double_q: False
     batch_size: 64 ## The min amount of experience to collect before a training update
     train_batch_size: 64 ## training batch size used for computing gradients of q function or policy
     eval_batch_size: 4096 ## How much experience should be collected over the environment to evaluate the average reward of a policy
@@ -14,7 +13,7 @@ alg:
     num_critic_updates_per_agent_update: 2 ## Number of training updates after #batch_size experience is collected.
     no_gpu: False
     which_gpu: 0
-    rl_alg: 'dqn' ## RL training algorithm ['ddpg', 'td3', 'sac','pg']
+    rl_alg: 'pg' ## RL training algorithm ['ddpg', 'td3', 'sac','pg']
     learning_starts: 1024  ## How much initial experience to collect before training begins
     learning_freq: 1 
     target_update_freq: 1
@@ -42,7 +41,7 @@ alg:
     gae_lambda: None
     standardize_advantages: False 
     reward_to_go: False
-    nn_baseline: False
+    nn_baseline: True
 
 logging:
     video_log_freq: 1 # How often to generate a video to log/

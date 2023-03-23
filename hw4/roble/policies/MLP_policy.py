@@ -183,15 +183,15 @@ class MLPPolicyPG(MLPPolicy):
             q_values_norm = (q_values - q_values.mean()) / (q_values.std() + 1e-8)
             baseline_targets = ptu.from_numpy(q_values_norm)
             
-            self.baseline_optimizer.zero_grad()
+            self._baseline_optimizer.zero_grad() 
             baseline_loss = self.baseline_loss(self.baseline(observations).squeeze(), baseline_targets)
             baseline_loss.backward()
-            self.baseline_optimizer.step()
+            self._baseline_optimizer.step()
 
-        self.optimizer.zero_grad()
+        self._optimizer.zero_grad()
         loss = -(self(observations).log_prob(actions) * (advantages)).mean()
         loss.backward()
-        self.optimizer.step()
+        self._optimizer.step()
 
         train_log = {
             'Training Loss': ptu.to_numpy(loss),

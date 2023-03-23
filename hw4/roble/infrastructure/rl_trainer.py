@@ -63,9 +63,9 @@ class RL_Trainer(object):
             
             
         # Call your goal conditionned wrapper here (You can modify arguments depending on your implementation)
-        if self.params['env']['task_name'] == 'gclr':
+        if self.params['env']['task_name'] == 'gcrl':
             self.env = GoalConditionedEnv(self.env)     
-        elif self.params['env']['task_name'] == 'gclr_v2':
+        elif self.params['env']['task_name'] == 'gcrl_v2':
             self.env = GoalConditionedEnvV2(self.env)
         elif self.params['env']['task_name'] == 'hrl':
             self.env = HRLWrapper(self.env)
