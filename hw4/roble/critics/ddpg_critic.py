@@ -16,7 +16,7 @@ class DDPGCritic(BaseCritic):
         self.env_name = hparams['env']['env_name']
         self.ob_dim = hparams['alg']['ob_dim']
         self.learning_rate = hparams['alg']['critic_learning_rate']
-        self.hparams = hparams
+
         if isinstance(self.ob_dim, int):
             self.input_shape = (self.ob_dim,)
         else:
@@ -52,7 +52,7 @@ class DDPGCritic(BaseCritic):
             nn_baseline=False,
             deterministic=True
             )
-        #self.learning_rate_scheduler = optim.lr_scheduler.LambdaLR(
+        # self.learning_rate_scheduler = optim.lr_scheduler.LambdaLR(
         #     self.optimizer,
         #     self.optimizer_spec.learning_rate_schedule,
         # 
@@ -92,19 +92,18 @@ class DDPGCritic(BaseCritic):
         
         ### Hint: 
         # qa_t_values = self.q_net(ob_no, ac_na)
-        qa_t_values = self.q_net(ob_no, ac_na)
+        qa_t_values = TODO
+        
         # TODO compute the Q-values from the target network 
         ## Hint: you will need to use the target policy
-        qa_tp1_values = self.q_net_target(next_ob_no, self.actor_target(next_ob_no)).squeeze(1)
-        
+        qa_tp1_values = TODO
+
         # TODO compute targets for minimizing Bellman error
         # HINT: as you saw in lecture, this would be:
             #currentReward + self.gamma * qValuesOfNextTimestep * (not terminal)
-
-        target = reward_n + self.gamma*qa_tp1_values*(1-terminal_n)
-        
+        target = TODO
         target = target.detach()
-        q_t_values = qa_t_values.squeeze(1)
+        
         assert q_t_values.shape == target.shape
         loss = self.loss(q_t_values, target)
 
@@ -112,7 +111,7 @@ class DDPGCritic(BaseCritic):
         loss.backward()
         utils.clip_grad_value_(self.q_net.parameters(), self.grad_norm_clipping)
         self.optimizer.step()
-        self.learning_rate_scheduler.step()
+        #self.learning_rate_scheduler.step()
         return {
             "Training Loss": ptu.to_numpy(loss),
             "Q Predictions": ptu.to_numpy(q_t_values),
@@ -126,16 +125,15 @@ class DDPGCritic(BaseCritic):
                 self.q_net_target.parameters(), self.q_net.parameters()
         ):
             ## Perform Polyak averaging
-            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            y = TODO
         for target_param, param in zip(
                 self.actor_target.parameters(), self.actor.parameters()
         ):
             ## Perform Polyak averaging for the target policy
-            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            y = TODO
 
     def qa_values(self, obs):
-        observation = ptu.from_numpy(obs)
+        obs = ptu.from_numpy(obs)
         ## HINT: the q function take two arguments  
-        predicted_action = self.actor(observation)
-        qa_values = self.q_net(observation, predicted_action)
-        return qa_values
+        qa_values = TODO
+        return ptu.to_numpy(qa_values)
