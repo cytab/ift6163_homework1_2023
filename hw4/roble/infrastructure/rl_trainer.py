@@ -8,6 +8,8 @@ from gym import wrappers
 import numpy as np
 import torch
 
+sys.path.append('/home/cyrille/Desktop/IFT6163/ift6163_homework1_2023')
+
 from hw4.roble.infrastructure import pytorch_util as ptu
 from hw4.roble.infrastructure import utils
 from hw4.roble.infrastructure.logger import Logger
@@ -64,11 +66,11 @@ class RL_Trainer(object):
             
         # Call your goal conditionned wrapper here (You can modify arguments depending on your implementation)
         if self.params['env']['task_name'] == 'gcrl':
-            self.env = GoalConditionedEnv(self.env)     
+            self.env = GoalConditionedEnv(self.env, self.params)     
         elif self.params['env']['task_name'] == 'gcrl_v2':
-            self.env = GoalConditionedEnvV2(self.env)
+            self.env = GoalConditionedEnvV2(self.env, self.params)
         elif self.params['env']['task_name'] == 'hrl':
-            self.env = HRLWrapper(self.env)
+            self.env = HRLWrapper(self.env, self.params)
 
 
 

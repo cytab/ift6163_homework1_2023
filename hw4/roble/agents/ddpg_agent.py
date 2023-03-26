@@ -59,26 +59,30 @@ class DDPGAgent(object):
         # TODO store the latest observation ("frame") into the replay buffer
         # HINT: the replay buffer used here is `MemoryOptimizedReplayBuffer`
             # in dqn_utils.py
-        self.replay_buffer_idx = -1
+        self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
 
         # TODO add noise to the deterministic policy
-        perform_random_action = TODO
+        perform_random_action = True if (self.t < self.learning_starts) else False
         # HINT: take random action 
-        action = TODO
-        
+        a = self.actor.get_action(self.replay_buffer.encode_recent_observation())
+        action = self.env.action_space.sample() if perform_random_action else np.clip(a + 0.1*np.random.normal(0, 1), self.env.action_space.low, self.env.action_space.high)
+
         # TODO take a step in the environment using the action from the policy
         # HINT1: remember that self.last_obs must always point to the newest/latest observation
         # HINT2: remember the following useful function that you've seen before:
             #obs, reward, done, info = env.step(action)
-        TODO
-
+        self.last_obs, reward, done, info = self.env.step(action)
+        self.cumulated_rewards += reward
         # TODO store the result of taking this action into the replay buffer
         # HINT1: see your replay buffer's `store_effect` function
         # HINT2: one of the arguments you'll need to pass in is self.replay_buffer_idx from above
-        TODO
+        self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
 
         # TODO if taking this step resulted in done, reset the env (and the latest observation)
-        TODO
+        if done:
+            self.last_obs = self.env.reset()
+            self.rewards.append(self.cumulated_rewards)
+            self.cumulated_rewards = 0
 
     def sample(self, batch_size):
         if self.replay_buffer.can_sample(self.batch_size):
@@ -94,19 +98,18 @@ class DDPGAgent(object):
         ):
             # TODO fill in the call to the update function using the appropriate tensors
             log = self.q_fun.update(
-                TODO
+                ob_no, ac_na, next_ob_no, re_n, terminal_n
             )
             
             # TODO fill in the call to the update function using the appropriate tensors
             ## Hint the actor will need a copy of the q_net to maximize the Q-function
-            log = self.actor.update(
-                TODO
-            )
+            log['Actor'] = self.actor.update(ob_no, copy.deepcopy(self.q_fun))
+            
 
             # TODO update the target network periodically 
             # HINT: your critic already has this functionality implemented
             if self.num_param_updates % self.target_update_freq == 0:
-                TODO
+                self.q_fun.update_target_network()
 
             self.num_param_updates += 1
         self.t += 1

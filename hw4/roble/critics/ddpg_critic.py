@@ -92,18 +92,19 @@ class DDPGCritic(BaseCritic):
         
         ### Hint: 
         # qa_t_values = self.q_net(ob_no, ac_na)
-        qa_t_values = TODO
-        
+        qa_t_values = self.q_net(ob_no, ac_na)
         # TODO compute the Q-values from the target network 
         ## Hint: you will need to use the target policy
-        qa_tp1_values = TODO
-
+        qa_tp1_values = self.q_net_target(next_ob_no, self.actor_target(next_ob_no)).squeeze(1)
+        
         # TODO compute targets for minimizing Bellman error
         # HINT: as you saw in lecture, this would be:
             #currentReward + self.gamma * qValuesOfNextTimestep * (not terminal)
-        target = TODO
-        target = target.detach()
+
+        target = reward_n + self.gamma*qa_tp1_values*(1-terminal_n)
         
+        target = target.detach()
+        q_t_values = qa_t_values.squeeze(1)
         assert q_t_values.shape == target.shape
         loss = self.loss(q_t_values, target)
 
@@ -118,22 +119,24 @@ class DDPGCritic(BaseCritic):
             "Q Targets": ptu.to_numpy(target),
             "Policy Actions": ptu.to_numpy(ac_na),
             "Actor Actions": ptu.to_numpy(self.actor(ob_no))
-        }
+        }  
 
     def update_target_network(self):
         for target_param, param in zip(
                 self.q_net_target.parameters(), self.q_net.parameters()
         ):
             ## Perform Polyak averaging
-            y = TODO
+            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
         for target_param, param in zip(
                 self.actor_target.parameters(), self.actor.parameters()
         ):
             ## Perform Polyak averaging for the target policy
-            y = TODO
+            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+
 
     def qa_values(self, obs):
         obs = ptu.from_numpy(obs)
         ## HINT: the q function take two arguments  
-        qa_values = TODO
-        return ptu.to_numpy(qa_values)
+        predicted_action = self.actor(obs)
+        qa_values = self.q_net(obs, predicted_action)
+        return qa_values

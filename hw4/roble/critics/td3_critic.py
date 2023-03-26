@@ -34,18 +34,23 @@ class TD3Critic(DDPGCritic):
         reward_n = ptu.from_numpy(reward_n)
         terminal_n = ptu.from_numpy(terminal_n)
 
-        qa_t_values = TODO
+        qa_t_values = self.q_net(ob_no, ac_na)
         
         # TODO compute the Q-values from the target network 
         ## Hint: you will need to use the target policy
-        qa_tp1_values = TODO
+        ac = self.actor_target(next_ob_no)
+        epsilon = torch.randn_like(ac) * self.hparams['alg']['td3_target_policy_noise']
+        epsilon = torch.clamp(epsilon, -0.5, 0.5)
+        ac_next = ac + epsilon
+        action_noise = torch.clamp(ac_next, -self.ac_dim, self.ac_dim)
+        qa_tp1_values = self.q_net_target(next_ob_no, action_noise).squeeze(1)
 
         # TODO compute targets for minimizing Bellman error
         # HINT: as you saw in lecture, this would be:
             #currentReward + self.gamma * qValuesOfNextTimestep * (not terminal)
-        target = TODO
+        target = reward_n + self.gamma*qa_tp1_values*(1-terminal_n)
         target = target.detach()
-
+        q_t_values = qa_t_values.squeeze(1)
         assert q_t_values.shape == target.shape
         loss = self.loss(q_t_values, target)
 
@@ -53,11 +58,26 @@ class TD3Critic(DDPGCritic):
         loss.backward()
         utils.clip_grad_value_(self.q_net.parameters(), self.grad_norm_clipping)
         self.optimizer.step()
-        self.learning_rate_scheduler.step()
-        return {
+        #self.learning_rate_scheduler.step()
+        return {'Critic':{
             'Training Loss': ptu.to_numpy(loss),
+            'Q Predictions': ptu.to_numpy(q_t_values),
+            'Q Targets': ptu.to_numpy(target),
+            'Policy Actions': ptu.to_numpy(ac_na),
+            'Actor Actions': ptu.to_numpy(self.actor(ob_no)),
+            }
         }
 
     def update_target_network(self):
-        pass
+        for target_param, param in zip(
+                self.q_net_target.parameters(), self.q_net.parameters()
+        ):
+            target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            
+        for target_param, param in zip(
+                self.actor_target.parameters(), self.actor.parameters()
+        ):
+            target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+
+
 

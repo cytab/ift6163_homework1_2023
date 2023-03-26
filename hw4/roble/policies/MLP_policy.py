@@ -88,9 +88,9 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 
     # query the policy with observation(s) to get selected action(s)
     def get_action(self, obs: np.ndarray) -> np.ndarray:
-        # TODO: 
-        ##
-        pass
+        obs = ptu.from_numpy(obs)
+        action = self.forward(obs)
+        return ptu.to_numpy(action)
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
@@ -109,7 +109,8 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         else:
             if self._deterministic:
                 ##  TODO output for a deterministic policy
-                action_distribution = TODO
+                logit = self._mean_net(observation)
+                action_distribution = logit
             else:
                 batch_mean = self._mean_net(observation)
                 scale_tril = torch.diag(torch.exp(self._logstd))
@@ -145,7 +146,17 @@ class MLPPolicyDeterministic(MLPPolicy):
         # TODO: update the policy and return the loss
         ## Hint you will need to use the q_fun for the loss
         ## Hint: do not update the parameters for q_fun in the loss
-        return loss.item()
+        obs = ptu.from_numpy(observations)
+        action = self.forward(obs)
+        
+        loss = q_fun.q_net(obs, action)
+        
+        actor_loss = -loss.mean()
+        self._optimizer.zero_grad()
+        actor_loss.backward()
+        self._optimizer.step()
+        
+        return actor_loss.item()
     
 class MLPPolicyStochastic(MLPPolicy):
     """
@@ -159,14 +170,34 @@ class MLPPolicyStochastic(MLPPolicy):
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         # TODO: sample actions from the gaussian distribrution given by MLPPolicy policy when providing the observations.
         # Hint: make sure to use the reparameterization trick to sample from the distribution
-        
-        return ptu.to_numpy(action)
+        dist = self.forward(ptu.from_numpy(obs))
+        action = dist.rsample()
+        log = dist.log_prob(action)
+        return ptu.to_numpy(action), log
         
     def update(self, observations, q_fun):
         # TODO: update the policy and return the loss
         ## Hint you will need to use the q_fun for the loss
         ## Hint: do not update the parameters for q_fun in the loss
         ## Hint: you will have to add the entropy term to the loss using self.entropy_coeff
+        obs = ptu.from_numpy(observations)
+
+        actions_distribution = self(obs)
+        actions = actions_distribution.rsample()
+        
+        q_values = q_fun.q_net(obs, actions)
+        q_values = q_values.detach()
+
+        log_prob = actions_distribution.log_prob(actions)
+        entropy = actions_distribution.entropy()
+
+        loss = -(log_prob * q_values - self.entropy_coeff * entropy).mean()
+
+        self._optimizer.zero_grad()
+        loss.backward()
+        self._optimizer.step()
+
+        
         return loss.item()
     
 class MLPPolicyPG(MLPPolicy):
