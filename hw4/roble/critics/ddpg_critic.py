@@ -113,12 +113,13 @@ class DDPGCritic(BaseCritic):
         utils.clip_grad_value_(self.q_net.parameters(), self.grad_norm_clipping)
         self.optimizer.step()
         #self.learning_rate_scheduler.step()
-        return {
+        return {"Critic":{
             "Training Loss": ptu.to_numpy(loss),
             "Q Predictions": ptu.to_numpy(q_t_values),
             "Q Targets": ptu.to_numpy(target),
             "Policy Actions": ptu.to_numpy(ac_na),
             "Actor Actions": ptu.to_numpy(self.actor(ob_no))
+            }
         }  
 
     def update_target_network(self):
@@ -126,12 +127,12 @@ class DDPGCritic(BaseCritic):
                 self.q_net_target.parameters(), self.q_net.parameters()
         ):
             ## Perform Polyak averaging
-            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            y = target_param.data.copy_(self.polyak_avg *param.data + (1 - self.polyak_avg )*target_param.data)
         for target_param, param in zip(
                 self.actor_target.parameters(), self.actor.parameters()
         ):
             ## Perform Polyak averaging for the target policy
-            y = target_param.data.copy_(self.hparams['alg']['polyak_avg']*param.data + (1 - self.hparams['alg']['polyak_avg'])*target_param.data)
+            y = target_param.data.copy_(self.polyak_avg *param.data + (1 - self.polyak_avg )*target_param.data)
 
 
     def qa_values(self, obs):

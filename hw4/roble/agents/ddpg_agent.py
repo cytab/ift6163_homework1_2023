@@ -72,12 +72,11 @@ class DDPGAgent(object):
         # HINT2: remember the following useful function that you've seen before:
             #obs, reward, done, info = env.step(action)
         self.last_obs, reward, done, info = self.env.step(action)
-        self.cumulated_rewards += reward
+        self.rewards.append(reward)
         # TODO store the result of taking this action into the replay buffer
         # HINT1: see your replay buffer's `store_effect` function
         # HINT2: one of the arguments you'll need to pass in is self.replay_buffer_idx from above
         self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
-
         # TODO if taking this step resulted in done, reset the env (and the latest observation)
         if done:
             self.last_obs = self.env.reset()
