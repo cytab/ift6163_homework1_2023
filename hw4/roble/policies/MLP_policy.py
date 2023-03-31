@@ -24,6 +24,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                  training=True,
                  nn_baseline=False,
                  deterministic=False,
+                 learn_policy_std=False,
                  **kwargs
                  ):
         super().__init__(**kwargs)
@@ -41,6 +42,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             self._optimizer = optim.Adam(self._logits_na.parameters(),
                                         self._learning_rate)
         else:
+            self._learn_policy_std = learn_policy_std
             self._logits_na = None
             self._mean_net = ptu.build_mlp(input_size=self._ob_dim, 
                                       output_size=self._ac_dim,
@@ -52,15 +54,21 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                     self._learning_rate
                 )
             else:
-                self._logstd = nn.Parameter(
-                    torch.zeros(self._ac_dim, dtype=torch.float32, device=ptu.device)
+                self._std = nn.Parameter(
+                    torch.ones(self._ac_dim, dtype=torch.float32, device=ptu.device) * 0.2
                 )
-                self._logstd.to(ptu.device)
-                self._optimizer = optim.Adam(
-                    itertools.chain([self._logstd], self._mean_net.parameters()),
-                    self._learning_rate
-                )
-
+                self._std.to(ptu.device)
+                if self._learn_policy_std:
+                    self._optimizer = optim.Adam(
+                        itertools.chain([self._std], self._mean_net.parameters()),
+                        self._learning_rate
+                    )
+                else:
+                    self._optimizer = optim.Adam(
+                        itertools.chain(self._mean_net.parameters()),
+                        self._learning_rate
+                    )
+        self.nn_baseline = nn_baseline
         if nn_baseline:
             self._baseline = ptu.build_mlp(
                 input_size=self._ob_dim,
@@ -113,7 +121,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                 action_distribution = logit
             else:
                 batch_mean = self._mean_net(observation)
-                scale_tril = torch.diag(torch.exp(self._logstd))
+                scale_tril = torch.diag(torch.exp(self._std))
                 batch_dim = batch_mean.shape[0]
                 batch_scale_tril = scale_tril.repeat(batch_dim, 1, 1)
                 action_distribution = distributions.MultivariateNormal(
@@ -201,9 +209,9 @@ class MLPPolicyStochastic(MLPPolicy):
         return loss.item()
     
 class MLPPolicyPG(MLPPolicy):
-    def __init__(self, ac_dim, ob_dim, n_layers, size, **kwargs):
-
-        super().__init__(ac_dim, ob_dim, n_layers, size, **kwargs)
+    def __init__(self, ac_dim, ob_dim, n_layers, size, learn_policy_std=False, **kwargs):
+        
+        super().__init__(ac_dim, ob_dim, n_layers, size, learn_policy_std=False, **kwargs)
         self.baseline_loss = nn.MSELoss()
 
     def update(self, observations, actions, advantages, q_values=None):
@@ -215,7 +223,7 @@ class MLPPolicyPG(MLPPolicy):
             baseline_targets = ptu.from_numpy(q_values_norm)
             
             self._baseline_optimizer.zero_grad() 
-            baseline_loss = self.baseline_loss(self.baseline(observations).squeeze(), baseline_targets)
+            baseline_loss = self.baseline_loss(self._baseline(observations).squeeze(), baseline_targets)
             baseline_loss.backward()
             self._baseline_optimizer.step()
 
@@ -241,5 +249,12 @@ class MLPPolicyPG(MLPPolicy):
 
         """
         observations = ptu.from_numpy(observations)
-        pred = self.baseline(observations)
+        pred = self._baseline(observations)
         return ptu.to_numpy(pred.squeeze())
+    
+    def get_action(self, obs: np.ndarray) -> np.ndarray:
+        # TODO: sample actions from the gaussian distribrution given by MLPPolicy policy when providing the observations.
+        # Hint: make sure to use the reparameterization trick to sample from the distribution
+        dist = self.forward(ptu.from_numpy(obs))
+        action = dist.rsample()
+        return ptu.to_numpy(action)

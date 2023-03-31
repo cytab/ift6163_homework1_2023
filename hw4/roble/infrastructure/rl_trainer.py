@@ -96,16 +96,7 @@ class RL_Trainer(object):
             )
             self.mean_episode_reward = -float('nan')
             self.best_mean_episode_reward = -float('inf')
-        else :
-            self.env = wrappers.Monitor(
-                self.env,
-                os.path.join(self.params['logging']['logdir'], "gym"),
-                force=True,
-                video_callable=(None if self.params['logging']['video_log_freq'] > 0 else False),
-            )
-            self.mean_episode_reward = -float('nan')
-            self.best_mean_episode_reward = -float('inf')
-
+        
         self.env.seed(seed)
 
         # import plotting (locally if 'obstacles' env)
@@ -233,6 +224,8 @@ class RL_Trainer(object):
 
                 if self.params['logging']['save_params']:
                     self.agent.save('{}/agent_itr_{}.pt'.format(self.params['logging']['logdir'], itr))
+            if  self.params['alg']['on_policy']:       
+                self.agent.clear_mem()
 
     ####################################
     ####################################
@@ -264,7 +257,7 @@ class RL_Trainer(object):
         # note: here, we collect MAX_NVIDEO rollouts, each of length MAX_VIDEO_LEN
 
         train_video_paths = None
-        if self.log_video:
+        if self.logvideo:
             print('\nCollecting train rollouts to be used for saving videos...')
             ## TODO look in utils and implement sample_n_trajectories
             train_video_paths = utils.sample_n_trajectories(self.env, collect_policy, MAX_NVIDEO, MAX_VIDEO_LEN, True)
@@ -327,7 +320,7 @@ class RL_Trainer(object):
         self.logger.flush()
         
     
-    def perform_ddpg_logging(self, itr,all_logs):        
+    def perform_ddpg_logging(self, itr, all_logs):
         logs = OrderedDict()
         logs["Train_EnvstepsSoFar"] = self.agent.t
         
@@ -395,10 +388,10 @@ class RL_Trainer(object):
         
         # collect eval trajectories, for logging
         print("\nCollecting data for eval...")
-        eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(self.env, eval_policy, self.params['eval_batch_size'], self.params['max_episode_length'])
+        eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(self.env, eval_policy, self.params['alg']['eval_batch_size'], self.params['env']['max_episode_length'])
 
         # save eval rollouts as videos in tensorboard event file
-        if self.log_video:
+        if self.logvideo:
             if train_video_paths is not None:
                 #save train/eval videos
                 print('\nSaving train rollouts as videos...')
@@ -416,7 +409,7 @@ class RL_Trainer(object):
         # save eval metrics
         if self.logmetrics:
             # returns, for logging
-            train_returns = [path["reward"].sum() for path in paths]
+            train_returns = [path["reward"].mean() for path in paths]
             eval_returns = [eval_path["reward"].sum() for eval_path in eval_paths]
 
             # episode lengths, for logging
