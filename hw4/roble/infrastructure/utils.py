@@ -7,7 +7,7 @@ import time
 def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('rgb_array')):
 
     ob = env.reset()
-    obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
+    obs, acs, rewards, next_obs, terminals, image_obs, scores = [], [], [], [], [], [], []
     steps = 0
     while True:
         if render:  # feel free to ignore this for now
@@ -30,6 +30,7 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
         # add the observation after taking a step to next_obs
         next_obs.append(ob)
         rewards.append(rew)
+        scores.append(info["score"])
         steps += 1
         # If the episode ended, the corresponding terminal value is 1
         # otherwise, it is 0
@@ -38,6 +39,7 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
             break
         else:
             terminals.append(0)
+        info["scores"] = np.array(scores)
     return Path(obs, image_obs, acs, rewards, next_obs, terminals, info)
 
 def sample_trajectories(env, policy, min_timesteps_per_batch, max_path_length, render=False, render_mode=('rgb_array')):
