@@ -221,7 +221,7 @@ class RL_Trainer(RL_Trainer):
             eval_avg_rew = [eval_path["reward"].mean() for eval_path in eval_paths]
             eval_avg_success = [eval_path["info"]["success"].mean() for eval_path in eval_paths]
             distance_path_evaluation =  [(-1*eval_path["info"]["score"]).mean() for eval_path in eval_paths]
-            distance_path_training =  [(-1*path["info"]["score"]).mean() for path in eval_paths]
+            distance_path_training =  [(-1*path["info"]["score"]).mean() for path in paths]
             # episode lengths, for logging
             train_ep_lens = [len(path["reward"]) for path in paths]
             eval_ep_lens = [len(eval_path["reward"]) for eval_path in eval_paths]
