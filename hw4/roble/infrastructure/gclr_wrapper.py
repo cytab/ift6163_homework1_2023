@@ -8,7 +8,7 @@ class GoalConditionedEnv(gym.Env):
         self.env = env
         self.params = params
         
-        self.goal_distribution = None
+        self.goal_distribution = True if self.params['alg']['goal_dist']=='normal' else False
         self.new_low_ac = -1
         self.new_high_ac = 1
         if isinstance(self.env, gym.Env):
@@ -26,24 +26,26 @@ class GoalConditionedEnv(gym.Env):
             elif self.params['env']['env_name']== 'antmaze':
                 self.new_low_obs = -4.0
                 self.new_high_obs = 20.0
-                self.observation_space = self.env.observation_space()
-                self.action_space = self.action_space()
+                self.observation_space = spaces.Box(low=self.new_low_obs, high=self.new_high_obs, shape=(2,))
+                self.action_space = self.env.action_space
                 self.shape_ac = (8,)
-                
-        
-        
-        self.goal = np.random.uniform(low=self.new_low_obs, high=self.new_high_obs, size=(2,))
+                  
+        self.goal = None
         self.state = None
-        self.state_mod = None
+        self.stepK = 0
+        self.reset()
     
     def reset(self):
         # Add code to generate a goal from a distribution
         if self.params['env']['env_name'] == 'reacher':
             self.state = self.env.reset()
+            self.goal = self.sample_goal(self.goal_distribution)
+            self.state[-3:] = self.goal - self.params['alg']['relative_goal']*self.state[-6:-3]
             return self.state
         elif self.params['env']['env_name']== 'antmaze':
-            self.goal = np.random.uniform(low=self.new_low_obs, high=self.new_high_obs, size=(2,))
             self.state = self.env.reset()
+            print(self.state.shape)
+            self.goal = self.sample_goal(self.goal_distribution)
             return self.createState() 
     
     def render(self, mode):
@@ -51,31 +53,87 @@ class GoalConditionedEnv(gym.Env):
 
     def step(self, action):
         ## Add code to compute a new goal-conditioned reward
-        if self.params['env']['env_name'] == 'reacher':
+        if self.params['env']['env_name'] == 'reacher' :
             self.state, new_reward, done, info = self.env.step(action)
             return self.state, new_reward, done, info 
+        
+        elif self.params['env']['env_name']== 'antmaze':
+            self.state, reward, done, info = self.env.step(action)   
+            new_reward = -np.linalg.norm(self.state[:2] - self.goal)
+            return self.createState(), new_reward, done, info 
+        
+    def createState(self):
+        ## Add the goal to the state
+        return np.append(self.state, self.goal - self.params['alg']['relative_goal']*self.state)
+    
+    def sample_goal(self, normal=False):
+        if self.params['env']['env_name'] == 'reacher':
+            if normal :
+                goal = np.random.normal(loc=[0.2, -0.7, 0.0], scale=[0.3, 0.4, 0.05])
+            else:
+                goal = np.random.uniform(low=[-0.6, -1.4, -0.4], high=[0.8, 0.2, 0.5])
+        elif self.params['env']['env_name']== 'antmaze':
+            if normal :
+                goal = np.random.normal(loc=[0, 8], scale=[4, 4])
+            else:
+                goal = np.random.uniform(low=[-4, 4], high=[20, 4])
+        return goal
+        
+class GoalConditionedEnvV2(GoalConditionedEnv):
+
+    def __init__(self, env, params):
+        self.env = env
+        self.k_step_stored = env.total_envsteps
+        self.stepK = 0 
+    
+    def sample_goal(self, normal=False):
+        if self.params['env']['env_name'] == 'reacher':
+            if normal :
+                goal = np.random.normal(loc=[0.2, -0.7, 0.0], scale=[0.3, 0.4, 0.05])
+            else:
+                goal = np.random.uniform(low=[-0.6, -1.4, -0.4], high=[0.8, 0.2, 0.5])
+        elif self.params['env']['env_name']== 'antmaze':
+            if normal :
+                goal = np.random.normal(loc=[0, 8], scale=[4, 4])
+            else:
+                goal = np.random.uniform(low=[-4, 4], high=[20, 4])
+        return goal
+    
+    def reset(self):
+        # Add code to generate a goal from a distribution
+        self.stepK = 0
+        if self.params['env']['env_name'] == 'reacher':
+            self.state = self.env.reset()
+            self.goal = self.sample_goal(self.goal_distribution)
+            self.state[-3:] = self.goal 
+            return self.state
+        elif self.params['env']['env_name']== 'antmaze':
+            self.state = self.env.reset()
+            self.goal = self.sample_goal(self.goal_distribution)
+            return self.createState() 
+
+    def step(self, action):
+        ## Add code to compute a new goal-conditioned reward
+        self.stepK +=1
+        if self.params['env']['env_name'] == 'reacher' :
+            self.state, new_reward, done, info = self.env.step(action)
+            
+            if self.stepK % self.params['alg']['goal_frequency'] == 0:
+                self.goal =self.sample_goal(self.goal_distribution)
+                self.state[-3:] = self.goal 
+                
+            return self.state, new_reward, done, info 
+        
         elif self.params['env']['env_name']== 'antmaze':
             self.state, reward, done, info = self.env.step(action)
+            
+            if self.stepK % self.params['alg']['goal_frequency'] == 0:
+                self.goal =self.sample_goal(self.goal_distribution)
+                
             new_reward = -np.linalg.norm(self.state[:2] - self.goal)
             return self.createState(), new_reward, done, info 
         
     def createState(self):
         ## Add the goal to the state
         return np.append(self.state, self.goal)
-        
-class GoalConditionedEnvV2(GoalConditionedEnv):
-
-    def __init__(self):
-        # TODO
-        pass 
-    
-    def reset(self):
-        # Add code to generate a goal from a distribution
-        # TODO
-        pass 
-
-    def step(self):
-        ## Add code to compute a new goal-conditioned reward
-        # TODO
-        pass 
         

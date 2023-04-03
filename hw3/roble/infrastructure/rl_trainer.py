@@ -328,10 +328,7 @@ class RL_Trainer(object):
         critic_loss = []
         actor_loss = []
         print_all_logs = True
-<<<<<<< HEAD
         
-=======
->>>>>>> 5a7e39e78a9260e078555305e669ebcb93ef6e6c
         for log in all_logs:
             if len(log) > 0:
                 print_all_logs = True
@@ -344,11 +341,7 @@ class RL_Trainer(object):
                 
                 if "Actor" in log.keys():
                     actor_loss.append(log["Actor"])
-<<<<<<< HEAD
                     
-=======
-                
->>>>>>> 5a7e39e78a9260e078555305e669ebcb93ef6e6c
         if print_all_logs:
             logs["Q_Predictions"] = np.mean(np.array(Q_predictions))
             logs["Q_Targets"] = np.mean(np.array(Q_targets))
@@ -356,7 +349,6 @@ class RL_Trainer(object):
             logs["Policy_Actions_Std"] = np.mean(np.array(policy_actions_std))
             logs["Actor_Actions"] = np.mean(np.array(actor_actions_mean))
             logs["Critic_Loss"] = np.mean(np.array(critic_loss))
-<<<<<<< HEAD
             if len(actor_loss) > 0:
                 logs["Actor_Loss"] = np.mean(np.array(actor_loss))
                 
@@ -367,18 +359,6 @@ class RL_Trainer(object):
             print('Done DDPG logging...\n\n')
             
             self.logger.flush()
-=======
-            
-            if len(actor_loss) > 0:
-                logs["Actor_Loss"] = np.mean(np.array(actor_loss))
-            
-        for key, value in logs.items():
-            print('{} : {}'.format(key, value))
-            self.logger.log_scalar(value, key, self.agent.t)
-        self.logger.log_file(itr, logs)
-        print('Done DDPG logging...\n\n')
-        self.logger.flush()
->>>>>>> 5a7e39e78a9260e078555305e669ebcb93ef6e6c
 
     def perform_logging(self, itr, paths, eval_policy, train_video_paths, all_logs):
         

@@ -41,24 +41,26 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         # finalize step
         env_info = {'ob': ob,
                     'rewards': self.reward_dict,
-                    'score': score}
+                    'score': score,
+                    "success": self.get_target_dist(ob) < 0.2}
 
         return ob, reward, done, env_info
 
-    def get_score(self, obs):
+    def get_target_dist(self, obs):
         hand_pos = obs[-6:-3]
         target_pos = obs[-3:]
-        score = -1*np.abs(hand_pos-target_pos)
+        return np.abs(hand_pos-target_pos)
+        
+    def get_score(self, obs):
+        score = -1*self.get_target_dist(obs)
         return score
 
     def get_reward(self, observations, actions):
 
         """get reward/s of given (observations, actions) datapoint or datapoints
-
         Args:
             observations: (batchsize, obs_dim) or (obs_dim,)
             actions: (batchsize, ac_dim) or (ac_dim,)
-
         Return:
             r_total: reward of this (o,a) pair, dimension is (batchsize,1) or (1,)
             done: True if env reaches terminal state, dimension is (batchsize,1) or (1,)
@@ -79,7 +81,7 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
         #calc rew
         dist = np.linalg.norm(hand_pos - target_pos, axis=1)
-        self.reward_dict['r_total'] = -10*dist
+        self.reward_dict['r_total'] = -1*dist
 
         #done is always false for this env
         dones = np.zeros((observations.shape[0],))
@@ -134,10 +136,20 @@ def create_reacher_env():
 if __name__ == '__main__':
     env = create_reacher_env()
     env.reset()
-    env.render()
-    for i in range(1000):
-        env.step(env.action_space.sample())
-        env.render()
+    # env.render()
+    hand_poses = []
+    for e in range(25):
+        for i in range(500):
+            a = env.action_space.sample()
+            # print ("action", a)
+            obs, _, _, _ = env.step(a)
+            hand_pos = obs[-6:-3]
+            hand_poses.append(hand_pos)
+            # print ("hand_pos", hand_pos)
+            # env.render()
 
+    print ("Min: ", np.min(hand_poses, axis=0))
+    print ("Max: ", np.max(hand_poses, axis=0))
+    print ("Mean: ", np.mean(hand_poses, axis=0))
+    print ("STD: ", np.std(hand_poses, axis=0))
     env.close()
-        

@@ -13,25 +13,25 @@ class PGAgent(BaseAgent):
         self.env = env
         self.agent_params = agent_params
         print ("self.agent_params: ", self.agent_params)
-        self.gamma = self.agent_params['alg']['discount']
-        self.standardize_advantages = self.agent_params['alg']['standardize_advantages']
-        self.nn_baseline = self.agent_params['alg']['nn_baseline']
-        self.reward_to_go = self.agent_params['alg']['reward_to_go']
-        self.gae_lambda = self.agent_params['alg']['gae_lambda']
+        self.gamma = self.agent_params['discount']
+        self.standardize_advantages = self.agent_params['standardize_advantages']
+        self.nn_baseline = self.agent_params['nn_baseline']
+        self.reward_to_go = self.agent_params['reward_to_go']
+        self.gae_lambda = self.agent_params['gae_lambda']
 
         if self.gae_lambda == 'None':
             self.gae_lambda = None
 
         # actor/policy
         self.actor = MLPPolicyPG(
-            ac_dim=self.agent_params['alg']['ac_dim'],
-            ob_dim=self.agent_params['alg']['ob_dim'],
-            n_layers=self.agent_params['alg']['n_layers'],
-            size=self.agent_params['alg']['size'],
-            discrete=self.agent_params['alg']['discrete'],
-            learning_rate=self.agent_params['alg']['learning_rate'],
-            nn_baseline=self.agent_params['alg']['nn_baseline'],
-            learn_policy_std=self.agent_params['alg']['learn_policy_std'],
+            self.agent_params['ac_dim'],
+            self.agent_params['ob_dim'],
+            self.agent_params['n_layers'],
+            self.agent_params['size'],
+            discrete=self.agent_params['discrete'],
+            learning_rate=self.agent_params['learning_rate'],
+            nn_baseline=self.agent_params['nn_baseline'],
+            learn_policy_std=self.agent_params['learn_policy_std'],
         )
 
         # replay buffer
@@ -43,10 +43,10 @@ class PGAgent(BaseAgent):
             Training a PG agent refers to updating its actor using the given observations/actions
             and the calculated qvals/advantages that come from the seen rewards.
         """
-        epsilon = 0.000000000000001
+
         q_values = self.calculate_q_vals(rewards_list)
         advantages = self.estimate_advantage(observations, rewards_list, q_values, terminals)
-        advantages = advantages / (np.std(advantages)+ epsilon) ## Try to keep the statistics of the advantages standardized
+        advantages = advantages / np.std(advantages) ## Try to keep the statistics of the advantages standardized
         train_log = self.actor.update(observations, actions, advantages=advantages, q_values=q_values)
 
         return train_log
