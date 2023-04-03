@@ -220,7 +220,8 @@ class RL_Trainer(RL_Trainer):
             eval_returns = [eval_path["reward"].mean() for eval_path in eval_paths]
             eval_avg_rew = [eval_path["reward"].mean() for eval_path in eval_paths]
             eval_avg_success = [eval_path["info"]["success"].mean() for eval_path in eval_paths]
-
+            distance_path_evaluation =  [(-1*eval_path["info"]["score"]).mean() for eval_path in eval_paths]
+            distance_path_training =  [(-1*path["info"]["score"]).mean() for path in eval_paths]
             # episode lengths, for logging
             train_ep_lens = [len(path["reward"]) for path in paths]
             eval_ep_lens = [len(eval_path["reward"]) for eval_path in eval_paths]
@@ -240,7 +241,10 @@ class RL_Trainer(RL_Trainer):
             logs["Train_MaxReturn"] = np.max(train_returns)
             logs["Train_MinReturn"] = np.min(train_returns)
             logs["Train_AverageEpLen"] = np.mean(train_ep_lens)
-
+            
+            logs["Eval_DistanceToGoal"] = np.mean(distance_path_evaluation)
+            logs["Train_DistanceToGoal"] = np.mean(distance_path_training)
+            
             logs["Train_EnvstepsSoFar"] = self.total_envsteps
             logs["TimeSinceStart"] = time.time() - self.start_time
             
